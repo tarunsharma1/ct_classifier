@@ -4,12 +4,14 @@
 
 # environment/computational parameters
 seed: 32678456782       # random number generator seed (long integer value)
-device: cuda
+device: cpu
 num_workers: 4
 
 # dataset parameters
-data_root: datasets/CaltechCT
-num_classes: 16
+data_root: /home/tsharma/tarun_code/10_plus_5_percent_crops
+num_classes: 50
+train_label_file: /home/tsharma/tarun_code/10_percent_labels.csv
+val_label_file: /home/tsharma/tarun_code/5_percent_labels.csv
 
 # training hyperparameters
 image_size: [224, 224]
