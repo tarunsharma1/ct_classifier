@@ -47,12 +47,8 @@ class CTDataset(Dataset):
 
         csv_reader = csv.reader(f, delimiter=',')
         for row in csv_reader:
-            if int(row[1]) not in list(self.label_mapping.keys()):
-                self.label_mapping[int(row[1])] = global_mapping_idx
-                global_mapping_idx += 1
-
             
-            self.data.append([row[0], self.label_mapping[int(row[1])]])
+            self.data.append([row[0], int(row[1])])
 
 
             ### over here do a mapping for labels from their actual label to a number from 0 to num_classes-1
