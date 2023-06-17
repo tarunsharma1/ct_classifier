@@ -118,6 +118,16 @@ def save_confusion_matrix(true_labels, predicted_labels, cfg):
         os.makedirs(matrix_path, exist_ok=True)
 
     confmatrix = confusion_matrix(true_labels, predicted_labels)
+    #classes_to_keep = [87, 63, 56, 93, 70, 36, 2, 69, 14, 8, 64, 77, 79, 7, 78, 15, 90, 3, 84, 66, 11, 1, 35, 6, 72, 16, 0, 5, 45, 47, 44, 76, 99, 12, 43, 18, 68, 21, 74, 13, 54, 65, 23, 86, 48, 24, 61, 81, 58, 27]
+    ## just check number of instances in each class
+    #for idx,instance in enumerate(confmatrix):
+    #  print(f'class {classes_to_keep[idx]}, # of instances {sum(instance)}')
+
+
+    #df_cm = pd.DataFrame(confmatrix, range(10), range(10))
+    #sn.set(font_scale=1.4) # for label size
+    #sn.heatmap(df_cm, annot=True, annot_kws={"size": 16}) # font size
+
     disp = ConfusionMatrixDisplay(confmatrix)
     #confmatrix.save(cfg['data_root'] + '/experiments/'+(args.exp_name)+'/figs/confusion_matrix_epoch'+'_'+ str(split) +'.png', facecolor="white")
     disp.plot()

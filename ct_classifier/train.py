@@ -20,6 +20,8 @@ from torch.optim import SGD
 from util import init_seed
 from dataset import CTDataset
 from model import CustomResNet18
+from sklearn.metrics import balanced_accuracy_score
+from sklearn.utils import class_weight
 
 
 
@@ -36,8 +38,18 @@ def create_dataloader(cfg, split='train'):
             shuffle=True,
             num_workers=cfg['num_workers']
         )
-    return dataLoader
+    
+    ### compute weights for class balancing
+    classes_for_weighting = []
+    for data, labels in dataLoader:
+        classes_for_weighting.extend(list(labels.numpy()))  
 
+    class_weights=class_weight.compute_class_weight('balanced',classes = np.unique(classes_for_weighting),y = np.array(classes_for_weighting))
+    class_weights = class_weights/np.sum(class_weights)
+    class_weights=torch.tensor(class_weights,dtype=torch.float).cuda()
+
+    return dataLoader, class_weights
+    
 
 
 def load_model(cfg):
@@ -97,7 +109,7 @@ def setup_optimizer(cfg, model):
 
 
 
-def train(cfg, dataLoader, model, optimizer):
+def train(cfg, dataLoader, model, optimizer, class_weights_train):
     '''
         Our actual training function.
     '''
@@ -113,10 +125,13 @@ def train(cfg, dataLoader, model, optimizer):
     model.train()
 
     # loss function
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(class_weights_train)
 
     # running averages
     loss_total, oa_total = 0.0, 0.0                         # for now, we just log the loss and overall accuracy (OA)
+
+    all_predicted_labels = []
+    all_ground_truth_labels = []
 
     # iterate over dataLoader
     progressBar = trange(len(dataLoader))
@@ -144,6 +159,9 @@ def train(cfg, dataLoader, model, optimizer):
         loss_total += loss.item()                       # the .item() command retrieves the value of a single-valued tensor, regardless of its data type and device of tensor
 
         pred_label = torch.argmax(prediction, dim=1)    # the predicted label is the one at position (class index) with highest predicted value
+        all_predicted_labels.extend(pred_label.cpu()) # this moves all predicted labels to a list above
+        all_ground_truth_labels.extend(labels.cpu())
+            
         oa = torch.mean((pred_label == labels).float()) # OA: number of correct predictions divided by batch size (i.e., average/mean)
         oa_total += oa.item()
 
@@ -160,11 +178,13 @@ def train(cfg, dataLoader, model, optimizer):
     loss_total /= len(dataLoader)           # shorthand notation for: loss_total = loss_total / len(dataLoader)
     oa_total /= len(dataLoader)
 
-    return loss_total, oa_total
+    bac = balanced_accuracy_score(all_ground_truth_labels, all_predicted_labels)
+
+    return loss_total, oa_total, bac
 
 
 
-def validate(cfg, dataLoader, model):
+def validate(cfg, dataLoader, model, class_weights_val):
     '''
         Validation function. Note that this looks almost the same as the training
         function, except that we don't use any optimizer or gradient steps.
@@ -177,10 +197,13 @@ def validate(cfg, dataLoader, model):
     # see lines 103-106 above
     model.eval()
     
-    criterion = nn.CrossEntropyLoss()   # we still need a criterion to calculate the validation loss
+    criterion = nn.CrossEntropyLoss(class_weights_val)   # we still need a criterion to calculate the validation loss
 
     # running averages
     loss_total, oa_total = 0.0, 0.0     # for now, we just log the loss and overall accuracy (OA)
+
+    all_predicted_labels = []
+    all_ground_truth_labels = []
 
     # iterate over dataLoader
     progressBar = trange(len(dataLoader))
@@ -201,6 +224,8 @@ def validate(cfg, dataLoader, model):
             loss_total += loss.item()
 
             pred_label = torch.argmax(prediction, dim=1)
+            all_predicted_labels.extend(pred_label.cpu()) # this moves all predicted labels to a list above
+            all_ground_truth_labels.extend(labels.cpu())
             oa = torch.mean((pred_label == labels).float())
             oa_total += oa.item()
 
@@ -216,8 +241,9 @@ def validate(cfg, dataLoader, model):
     progressBar.close()
     loss_total /= len(dataLoader)
     oa_total /= len(dataLoader)
+    bac = balanced_accuracy_score(all_ground_truth_labels, all_predicted_labels)
 
-    return loss_total, oa_total
+    return loss_total, oa_total, bac
 
 
 
@@ -243,8 +269,8 @@ def main():
         cfg['device'] = 'cpu'
 
     # initialize data loaders for training and validation set
-    dl_train = create_dataloader(cfg, split='train')
-    dl_val = create_dataloader(cfg, split='val')
+    dl_train, class_weights_train = create_dataloader(cfg, split='train')
+    dl_val, class_weights_val = create_dataloader(cfg, split='val')
 
     # initialize model
     model, current_epoch = load_model(cfg)
@@ -258,15 +284,17 @@ def main():
         current_epoch += 1
         print(f'Epoch {current_epoch}/{numEpochs}')
 
-        loss_train, oa_train = train(cfg, dl_train, model, optim)
-        loss_val, oa_val = validate(cfg, dl_val, model)
+        loss_train, oa_train, bac_train = train(cfg, dl_train, model, optim, class_weights_train)
+        loss_val, oa_val, bac_val = validate(cfg, dl_val, model, class_weights_val)
 
         # combine stats and save
         stats = {
             'loss_train': loss_train,
             'loss_val': loss_val,
             'oa_train': oa_train,
-            'oa_val': oa_val
+            'bac_train':bac_train,
+            'oa_val': oa_val,
+            'bac_val':bac_val
         }
         save_model(cfg, current_epoch, model, stats)
     
