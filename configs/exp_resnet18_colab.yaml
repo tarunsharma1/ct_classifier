@@ -4,15 +4,15 @@
 
 # environment/computational parameters
 seed: 32678456782       # random number generator seed (long integer value)
-device: cpu
+device: cuda
 num_workers: 4
 
 # dataset parameters
-data_root: /home/tsharma/tarun_code/10_plus_5_percent_crops
+data_root: ../10_plus_5_percent_crops
 num_classes: 50
-train_label_file: /home/tsharma/tarun_code/10_percent_labels.csv
-val_label_file: /home/tsharma/tarun_code/5_percent_labels.csv
-test_label_file: /home/tsharma/tarun_code/10_percent_test_labels.csv
+train_label_file: /content/gdrive/MyDrive/10_percent_labels_v2.csv
+val_label_file: /content/gdrive/MyDrive/5_percent_labels_v2.csv
+test_label_file: /content/gdrive/MyDrive/10_percent_test_labels.csv
 
 # training hyperparameters
 image_size: [224, 224]

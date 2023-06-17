@@ -42,44 +42,15 @@ class CTDataset(Dataset):
 
         if split == 'train':
             f = open(cfg['train_label_file'], 'r')
-        else:
+        elif split=='val':
             f = open(cfg['val_label_file'], 'r')
+        else:
+            f = open(cfg['test_label_file'], 'r')
 
         csv_reader = csv.reader(f, delimiter=',')
         for row in csv_reader:
             
             self.data.append([row[0], int(row[1])])
-
-
-            ### over here do a mapping for labels from their actual label to a number from 0 to num_classes-1
-
-
-
-        # load annotation file
-        # annoPath = os.path.join(
-        #     self.data_root,
-        #     'eccv_18_annotation_files',
-        #     'train_annotations.json' if self.split=='train' else 'cis_val_annotations.json'
-        # )
-        # meta = json.load(open(annoPath, 'r'))
-
-        # images = dict([[i['id'], i['file_name']] for i in meta['images']])          # image id to filename lookup
-        # labels = dict([[c['id'], idx] for idx, c in enumerate(meta['categories'])]) # custom labelclass indices that start at zero
-        
-        # # since we're doing classification, we're just taking the first annotation per image and drop the rest
-        # images_covered = set()      # all those images for which we have already assigned a label
-        # for anno in meta['annotations']:
-        #     imgID = anno['image_id']
-        #     if imgID in images_covered:
-        #         continue
-            
-        #     # append image-label tuple to data
-        #     imgFileName = images[imgID]
-        #     label = anno['category_id']
-        #     labelIndex = labels[label]
-        #     self.data.append([imgFileName, labelIndex])
-        #     images_covered.add(imgID)       # make sure image is only added once to dataset
-    
 
     def __len__(self):
         '''
