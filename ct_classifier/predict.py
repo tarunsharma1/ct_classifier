@@ -3,7 +3,7 @@ import argparse
 import yaml
 import glob
 from tqdm import trange
-import ipdb 
+
 import numpy as np
 
 import torch
@@ -55,14 +55,14 @@ def load_model(cfg):
     # load state dict and apply weights to model
     #print(f'Evaluating from epoch {eval_epoch}')
 
-    eval_epoch = '200'
-    state = torch.load(open(f'/home/tsharma/Downloads/{eval_epoch}.pt', 'rb'), map_location='cpu')
+    #eval_epoch = '200'
+    state = torch.load(open(cfg['inference_weights'], 'rb'), map_location='cpu')
     model_instance.load_state_dict(state['model'])
 
     # MOST OF THIS WILL BE COMMENTED OUT FOR US BECAUSE WE WONT BE STARTING WITH SOMETHING NEW
 
 
-    return model_instance, eval_epoch
+    return model_instance
 
 
 # THIS IS HOW THE MODEL TRAINS. The validation function is almost the same, some key differences: no backward pass here. We do not run the optimizer here: optimize
@@ -112,7 +112,7 @@ def predict(cfg, dataLoader, model):
 def save_confusion_matrix(true_labels, predicted_labels, cfg):
     # make figures folder if not there
 
-    matrix_path = cfg['data_root']+'/figs'
+    matrix_path = '../figs'
     #### make the path if it doesn't exist
     if not os.path.exists(matrix_path):  
         os.makedirs(matrix_path, exist_ok=True)
@@ -121,7 +121,7 @@ def save_confusion_matrix(true_labels, predicted_labels, cfg):
     disp = ConfusionMatrixDisplay(confmatrix)
     #confmatrix.save(cfg['data_root'] + '/experiments/'+(args.exp_name)+'/figs/confusion_matrix_epoch'+'_'+ str(split) +'.png', facecolor="white")
     disp.plot()
-    plt.savefig(cfg['data_root'] +'/figs/confusion_matrix-model_states-weighted2.png', facecolor="white")
+    plt.savefig(matrix_path+'/confusion_matrix-model_states-weighted2.png', facecolor="white")
        ## took out epoch)
     return confmatrix
 
@@ -138,10 +138,10 @@ def save_prevision_recall_curve(cfg, true_labels, predicted_labels, confidence_p
         y_true = np.array(binarized_true_labels)
         y_scores = confidence_prediction_list[:,entry]
         #ipdb.set_trace()
-        print(average_precision_score(y_true, y_scores)) 
+        #print(average_precision_score(y_true, y_scores)) 
         precision, recall, thresholds = precision_recall_curve(y_true, y_scores) #recall is x axis, precision is y axis
         plt.plot(recall, precision)
-        plt.savefig(cfg['data_root'] +'/figs/PR-curve-class-'+ str(entry) + '-overlay' + '.png', facecolor="white")
+        plt.savefig('../figs/PR-curve-class-'+ str(entry) + '-overlay' + '.png', facecolor="white")
         plt.clf()
         #ipdb.set_trace()
     
@@ -162,12 +162,12 @@ def main():
     dl_val = create_dataloader(cfg, split='test') #dl_val means dataloader validation 
 
     # initialize model
-    model, current_epoch = load_model(cfg)
+    model = load_model(cfg)
 
     predicted_labels, true_labels, confidence_prediction_list = predict(cfg, dl_val, model)  
     confidence_prediction_list = np.concatenate(np.array(confidence_prediction_list, dtype='object'))
     bac = balanced_accuracy_score(true_labels, predicted_labels)
-    print(bac)
+    print(f'balanced accuracy is {bac}')
 
     save_prevision_recall_curve(cfg, true_labels, predicted_labels, confidence_prediction_list)
 

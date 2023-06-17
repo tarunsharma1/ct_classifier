@@ -13,6 +13,7 @@ num_classes: 50
 train_label_file: /content/gdrive/MyDrive/10_percent_labels_v2.csv
 val_label_file: /content/gdrive/MyDrive/5_percent_labels_v2.csv
 test_label_file: /content/gdrive/MyDrive/10_percent_test_labels.csv
+inference_weights: /content/gdrive/MyDrive/200.pt
 
 # training hyperparameters
 image_size: [224, 224]
