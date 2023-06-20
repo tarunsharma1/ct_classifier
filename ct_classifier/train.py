@@ -22,6 +22,8 @@ from dataset import CTDataset
 from model import CustomResNet18
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.utils import class_weight
+import numpy as np
+import wandb
 
 
 
@@ -31,6 +33,8 @@ def create_dataloader(cfg, split='train'):
         PyTorch DataLoader object.
     '''
     dataset_instance = CTDataset(cfg, split)        # create an object instance of our CTDataset class
+
+    device = cfg['device']
 
     dataLoader = DataLoader(
             dataset=dataset_instance,
@@ -46,7 +50,7 @@ def create_dataloader(cfg, split='train'):
 
     class_weights=class_weight.compute_class_weight('balanced',classes = np.unique(classes_for_weighting),y = np.array(classes_for_weighting))
     class_weights = class_weights/np.sum(class_weights)
-    class_weights=torch.tensor(class_weights,dtype=torch.float).cuda()
+    class_weights=torch.tensor(class_weights,dtype=torch.float).to(device)
 
     return dataLoader, class_weights
     
@@ -76,6 +80,26 @@ def load_model(cfg):
         start_epoch = 0
 
     return model_instance, start_epoch
+
+def load_pretrained_weights(model, custom_weights=None):
+    if custom_weights:
+        state = torch.load(open(custom_weights, 'rb'), map_location='cpu')
+        pretrained_dict = state['state_dict']
+        model_dict = model.state_dict()
+        ## only update the weights of layers with the same names and also don't update the last layer because of size mismatch between num classes
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict and k not in ['classifier.weight', 'classifier.bias']}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
+
+
+        ## we need to copy everything except the last layer
+        #for key in state['model'].keys():
+            #if not(key == 'classifier.weight' or key== 'classifier.bias'):
+            ###### Tarun : LESSON LEARNT : THE LINE BELOW DOES NOT WORK FOR SOME REASON ..you must do it like mentioned in the most liked answer here https://discuss.pytorch.org/t/how-to-load-part-of-pre-trained-model/1113/2 ###
+            #model.state_dict()[key] = state['model'][key]
+        #model.load_state_dict(state['model'])
+        ##import ipdb;ipdb.set_trace()
+    return model
 
 
 
@@ -268,12 +292,30 @@ def main():
         print(f'WARNING: device set to "{device}" but CUDA not available; falling back to CPU...')
         cfg['device'] = 'cpu'
 
+
+    wandb.init(
+    # set the wandb project where this run will be logged
+    project="standard resnet18 15 percent labeled data",
+    
+    # track hyperparameters and run metadata
+    config={
+    "learning_rate": cfg['learning_rate'],
+    "architecture": "resnet 18",
+    "dataset": "15 percent labeled",
+    "epochs": cfg['num_epochs'],
+    "weight_decay": cfg['weight_decay'],
+    "batch_size": cfg['batch_size']
+    })
+
+
     # initialize data loaders for training and validation set
     dl_train, class_weights_train = create_dataloader(cfg, split='train')
     dl_val, class_weights_val = create_dataloader(cfg, split='val')
 
     # initialize model
     model, current_epoch = load_model(cfg)
+
+    model = load_pretrained_weights(model, '/home/tsharma/Downloads/checkpoint_0020.pth.tar')
 
     # set up model optimizer
     optim = setup_optimizer(cfg, model)
@@ -296,10 +338,17 @@ def main():
             'oa_val': oa_val,
             'bac_val':bac_val
         }
+        wandb.log({'loss_train': loss_train,
+            'loss_val': loss_val,
+            'oa_train': oa_train,
+            'bac_train':bac_train,
+            'oa_val': oa_val,
+            'bac_val':bac_val})
+
         save_model(cfg, current_epoch, model, stats)
     
 
-    # That's all, folks!
+    wandb.finish()
         
 
 
