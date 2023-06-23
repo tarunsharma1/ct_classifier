@@ -18,13 +18,13 @@ class CustomResNet18(nn.Module):
         '''
         super(CustomResNet18, self).__init__()
 
-        self.feature_extractor = resnet.resnet18(pretrained=True)       # "pretrained": use weights pre-trained on ImageNet
+        self.backbone = resnet.resnet18(pretrained=True)       # "pretrained": use weights pre-trained on ImageNet
 
         # replace the very last layer from the original, 1000-class output
         # ImageNet to a new one that outputs num_classes
-        last_layer = self.feature_extractor.fc                          # tip: print(self.feature_extractor) to get info on how model is set up
+        last_layer = self.backbone.fc                          # tip: print(self.feature_extractor) to get info on how model is set up
         in_features = last_layer.in_features                            # number of input dimensions to last (classifier) layer
-        self.feature_extractor.fc = nn.Identity()                       # discard last layer...
+        self.backbone.fc = nn.Identity()                       # discard last layer...
 
         self.classifier = nn.Linear(in_features, num_classes)           # ...and create a new one
     
@@ -37,7 +37,7 @@ class CustomResNet18(nn.Module):
             num_classes prediction.
         '''
         # x.size(): [B x 3 x W x H]
-        features = self.feature_extractor(x)    # features.size(): [B x 512 x W x H]
+        features = self.backbone(x)    # features.size(): [B x 512 x W x H]
         prediction = self.classifier(features)  # prediction.size(): [B x num_classes]
 
         return prediction

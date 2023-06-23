@@ -27,6 +27,8 @@ import wandb
 
 
 
+
+
 def create_dataloader(cfg, split='train'):
     '''
         Loads a dataset according to the provided split and wraps it in a
@@ -81,15 +83,62 @@ def load_model(cfg):
 
     return model_instance, start_epoch
 
-def load_pretrained_weights(model, custom_weights=None):
+def load_pretrained_weights_for_finetuning(cfg, model, custom_weights=None):
+    device = cfg['device']
     if custom_weights:
-        state = torch.load(open(custom_weights, 'rb'), map_location='cpu')
+        state = torch.load(open(custom_weights, 'rb'), map_location=device)
         pretrained_dict = state['state_dict']
         model_dict = model.state_dict()
-        ## only update the weights of layers with the same names and also don't update the last layer because of size mismatch between num classes
+
+        ################## method from https://github.com/sthalles/SimCLR/blob/simclr-refactor/feature_eval/mini_batch_logistic_regression_evaluator.ipynb #################
+        
+        # for k in list(pretrained_dict.keys()):
+        #     if k.startswith('backbone.'):
+        #         if k.startswith('backbone') and not k.startswith('backbone.fc'):
+        #             # removes prefix i.e backbone.conv1.weight becomes conv1.weight
+        #             pretrained_dict[k[len("backbone."):]] = pretrained_dict[k]
+        #     del pretrained_dict[k]
+
+        # # remove prefixes for our model too so that the keys match
+        # for k in list(model_dict.keys()):
+        #     starts_with = k.split('.')[0]
+        #     model_dict[k[len(starts_with)+1:]] = model_dict[k]
+        #     del model_dict[k]
+        # #import ipdb;ipdb.set_trace()
+        # model.load_state_dict(model_dict)
+        # log = model.load_state_dict(pretrained_dict, strict=False)
+        # import ipdb;ipdb.set_trace()
+
+        # assert log.missing_keys == ['fc.weight', 'fc.bias']
+
+        # import ipdb;ipdb.set_trace()
+        # # freeze all layers but the last fc
+        # for name, param in model.named_parameters():
+        #     if name not in ['fc.weight', 'fc.bias']:
+        #         param.requires_grad = False
+
+        # parameters = list(filter(lambda p: p.requires_grad, model.parameters()))
+        # assert len(parameters) == 2  # fc.weight, fc.bias
+
+
+
+        
+        # ###########################################################################################################################################################################
+
+        
+        ################### my method of loading weights ###########################################################################################################################
+        # only update the weights of layers with the same names and also don't update the last layer because of size mismatch between num classes
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict and k not in ['classifier.weight', 'classifier.bias']}
         model_dict.update(pretrained_dict)
         model.load_state_dict(model_dict)
+
+        ## freeze all layers but the last fc - finetuning only
+        for name, param in model.named_parameters():
+            if name not in ['classifier.weight', 'classifier.bias']:
+                param.requires_grad = False
+
+        parameters = list(filter(lambda p: p.requires_grad, model.parameters()))
+        assert len(parameters) == 2  # fc.weight, fc.bias
 
 
         ## we need to copy everything except the last layer
@@ -99,6 +148,9 @@ def load_pretrained_weights(model, custom_weights=None):
             #model.state_dict()[key] = state['model'][key]
         #model.load_state_dict(state['model'])
         ##import ipdb;ipdb.set_trace()
+
+        ##############################################################################################################################################################################
+
     return model
 
 
@@ -315,7 +367,7 @@ def main():
     # initialize model
     model, current_epoch = load_model(cfg)
 
-    model = load_pretrained_weights(model, '/home/tsharma/Downloads/checkpoint_0020.pth.tar')
+    model = load_pretrained_weights_for_finetuning(cfg, model, '/home/tsharma/Downloads/checkpoint_0020.pth.tar')
 
     # set up model optimizer
     optim = setup_optimizer(cfg, model)
