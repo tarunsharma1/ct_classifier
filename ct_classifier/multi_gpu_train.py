@@ -1,8 +1,11 @@
-'''
-    Training script. Here, we load the training and validation datasets (and
-    data loaders) and the model and train and validate the model accordingly.
-
-    2022 Benjamin Kellenberger
+ '''
+ Modified train.py to run on multiple GPUs using pytorch DDP.
+    For metrics I have used torch metrics as well as calculating them myself using torch.distributed gather function.
+    Both methods give me the same results. Remember to adjust the batch size and learning rate accordingly.
+    See this article : https://towardsdatascience.com/why-parallelized-training-might-not-be-working-for-you-4c01f606ef2c
+    
+    Observation: Atleast while training on resnet 18 I found the single gpu code to run much faster. This might be due to some 
+    overheads in parallel processing. Need to compare DDP with DP. 
 '''
 
 import os
