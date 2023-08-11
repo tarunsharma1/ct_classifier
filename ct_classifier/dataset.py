@@ -41,17 +41,31 @@ class CTDataset(Dataset):
         global_mapping_idx = 0
 
         if split == 'train':
-            f = open(cfg['train_label_file'], 'r')
+            ## in case we have multiple train files and wish to merge them
+            for file in cfg['train_label_file']:
+                f = open(file, 'r')
+                csv_reader = csv.reader(f, delimiter=',')
+                for row in csv_reader:
+                    self.data.append([row[0], int(row[1])])
+                f.close()
+                
         elif split=='val':
             f = open(cfg['val_label_file'], 'r')
-        else:
+        elif split=='test':
             f = open(cfg['test_label_file'], 'r')
-
-        csv_reader = csv.reader(f, delimiter=',')
-        for row in csv_reader:
-            
-            self.data.append([row[0], int(row[1])])
-
+        elif split=='unlabeled':
+            f = open(cfg['unlabeled_file'],'r')
+        
+        
+        if split == 'unlabeled':
+            csv_reader = csv.reader(f, delimiter=',')
+            for row in csv_reader:
+                self.data.append(row[0])
+        elif split != 'train':
+            csv_reader = csv.reader(f, delimiter=',')
+            for row in csv_reader:
+                self.data.append([row[0], int(row[1])])
+                
     def __len__(self):
         '''
             Returns the length of the dataset.
@@ -64,13 +78,18 @@ class CTDataset(Dataset):
             Returns a single data point at given idx.
             Here's where we actually load the image.
         '''
-        image_name, label = self.data[idx]              # see line 57 above where we added these two items to the self.data list
-
+        if self.split!='unlabeled':
+            image_name, label = self.data[idx]              # see line 57 above where we added these two items to the self.data list
+        else:
+            image_name = self.data[idx]              # see line 57 above where we added these two items to the self.data list
+            label = image_name ## this is so we can store predictions in a csv with the image name it came from
         # load image
         image_path = os.path.join(self.data_root, image_name)
         img = Image.open(image_path).convert('RGB')     # the ".convert" makes sure we always get three bands in Red, Green, Blue order
 
         # transform: see lines 31ff above where we define our transformations
         img_tensor = self.transform(img)
-
+        
+        
         return img_tensor, label
+        

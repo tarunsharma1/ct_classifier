@@ -8,26 +8,27 @@ device: cuda
 num_workers: 4
 
 # dataset parameters
-data_root: ../all_ROV_crops_with_unknown/all_ROV_crops_with_unknown
+data_root: /root/datasets/all_crops/
 num_classes: 51
-train_label_file: [/root/10_percent_train_with_unknown.csv]
+train_label_file: [/root/datasets/crops_10percent_train_set.csv]
 #train_label_file: [/root/10_percent_train_with_unknown.csv, /root/10p_predictions_on_unlabeled_thresh_0.1_simclr.csv]
-val_label_file: /root/5_percent_val_with_unknown.csv
-test_label_file: /root/10_percent_test_with_unknown.csv
+val_label_file: /root/datasets/crops_5percent_val_set.csv
+test_label_file: /root/datasets/crops_10percent_test_set.csv
 unlabeled_file: /root/75_percent_unlabeled_with_unknown.csv
 #inference_weights: /root/ct_classifier/model_states_paws/10p_paws_200.pt
-#inference_weights: /root/ct_classifier/model_states_simclr/200.pt
-inference_weights: /root/ct_classifier/model_states/resnet50_10p_200epochs.pt
-
 #inference_weights: /root/ct_classifier/model_states_simclr/10p_plus_psuedo_label_0.1_200.pt
-#inference_weights: /root/ct_classifier/model_states_simclr_1024/10p_simclr_200.pt
+#inference_weights: /root/ct_classifier/model_states_i2map_simclr/10p_200.pt
+#inference_weights: /root/ct_classifier/model_states_i2map_supervised/10p_200.pt
+inference_weights: /root/ct_classifier/model_states_i2map_paws/10p_200.pt
 
 # if starting_weights: None, it defaults to imagenet
 #starting_weights: None
 #starting_weights: /root/ct_classifier/model_states_simclr/200.pt
 #starting_weights: /root/simclr-pytorch/logs/exman-train.py/runs/000022/checkpoint-12100.pth.tar
 #starting_weights: /root/simclr-pytorch/logs/exman-train.py/runs/000052/checkpoint-3000.pth.tar
-starting_weights: /root/suncet/path_to_save_models_and_logs/paws-best.pth.tar
+#starting_weights: /root/suncet/path_to_save_models_and_logs/paws-best.pth.tar
+starting_weights: /root/suncet/path_to_save_models_and_logs_i2map/suncet-tmp-best.pth.tar
+
 
 finetune: False
 # training hyperparameters
